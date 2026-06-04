@@ -79,11 +79,11 @@ def create_app() -> FastAPI:
     # Allow the Next.js dev server during development.
     # Tighten to your production domain before deploying.
     app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://localhost:3000"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
     )
 
     # ── Routers ──────────────────────────────────────────────────────

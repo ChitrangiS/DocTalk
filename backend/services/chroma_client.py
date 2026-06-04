@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # ── Configuration ────────────────────────────────────────────────────
 
-_PERSIST_DIR: str      = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
+_PERSIST_DIR: str = os.getenv("CHROMA_PERSIST_DIR", "/data/chroma_db") 
 _COLLECTION_NAME: str  = os.getenv("CHROMA_COLLECTION_NAME", "doctalk_chunks")
 
 
