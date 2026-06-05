@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 
     # ── Groq (Day 4) ──────────────────────────────────────────
     groq_api_key: str = ""
-    groq_model: str = "llama-3.1-70b-versatile"
+    groq_model: str = "llama-3.3-70b-versatile"
 
     @property
     def max_upload_size_bytes(self) -> int:
