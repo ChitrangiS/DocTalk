@@ -27,7 +27,61 @@ _BATCH_SIZE: int = 32
 
 # ── Model singleton ──────────────────────────────────────────────────
 
-_MODEL_NAME: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+_DEFAULT_MODEL: str = "BAAI/bge-small-en-v1.5"
+
+
+def _is_valid_model_id(model_id: str) -> bool:
+    """
+    Return True if *model_id* looks like a valid HuggingFace repo ID.
+
+    HuggingFace repo IDs are either:
+      - A bare model name:          ``model-name_v2``
+      - An org-scoped name:         ``organisation/model-name_v2``
+
+    Each segment may only contain alphanumeric characters, hyphens (-),
+    underscores (_), and dots (.).  Characters such as %, [, ], @, !, ?
+    and whitespace are explicitly rejected.
+    """
+    import re
+
+    if not model_id or not isinstance(model_id, str):
+        return False
+
+    # Allow an optional single slash separating org from model name.
+    # Each segment: one or more alphanumeric / hyphen / underscore / dot chars.
+    _SEGMENT = r"[A-Za-z0-9._-]+"
+    pattern = re.compile(rf"^{_SEGMENT}(/{_SEGMENT})?$")
+    return bool(pattern.fullmatch(model_id.strip()))
+
+
+def _resolve_model_name() -> str:
+    """
+    Read ``EMBEDDING_MODEL`` from the environment, validate it, and return
+    the model name to use.  Falls back to *_DEFAULT_MODEL* when the value
+    is absent or contains characters that would cause an HFValidationError.
+    """
+    raw = os.getenv("EMBEDDING_MODEL", "")
+    if raw:
+        logger.info("EMBEDDING_MODEL env var raw value: %r", raw)
+        if _is_valid_model_id(raw):
+            logger.info("Using embedding model from environment: %s", raw)
+            return raw
+        logger.warning(
+            "EMBEDDING_MODEL value %r contains invalid characters and cannot "
+            "be used as a HuggingFace repo ID. "
+            "Falling back to default model: %s",
+            raw,
+            _DEFAULT_MODEL,
+        )
+    else:
+        logger.info(
+            "EMBEDDING_MODEL env var not set. Using default model: %s",
+            _DEFAULT_MODEL,
+        )
+    return _DEFAULT_MODEL
+
+
+_MODEL_NAME: str = _resolve_model_name()
 _model: Optional[SentenceTransformer] = None
 
 
@@ -57,7 +111,13 @@ def _get_model() -> SentenceTransformer:
 try:
     _get_model()
 except Exception as exc:
-    logger.error("Failed to load embedding model at startup: %s", exc)
+    logger.error(
+        "Failed to load embedding model '%s' at startup: %s. "
+        "The service will start, but embedding calls will fail until the "
+        "model is available.",
+        _MODEL_NAME,
+        exc,
+    )
     raise
 
 
