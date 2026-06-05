@@ -42,22 +42,47 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     Code before `yield` runs on startup; code after runs on shutdown.
     FastAPI's lifespan replaces the deprecated on_event decorators.
     """
-    logger.info("Starting %s v%s", settings.app_name, settings.app_version)
+    try:
+        logger.info("Starting %s v%s", settings.app_name, settings.app_version)
+        
+        # Validate GROQ_API_KEY is configured
+        logger.info("Checking GROQ_API_KEY configuration...")
+        key_exists = bool(settings.groq_api_key)
+        key_length = len(settings.groq_api_key) if settings.groq_api_key else 0
+        logger.info("GROQ_API_KEY exists: %s | Length: %d chars", key_exists, key_length)
+        
+        if not settings.groq_api_key or not settings.groq_api_key.strip():
+            logger.error(
+                "GROQ_API_KEY environment variable is not set or empty. "
+                "Chat functionality will not work. "
+                "Set GROQ_API_KEY in .env and restart the application."
+            )
+            raise ValueError(
+                "GROQ_API_KEY is required but not configured. "
+                "Please set the GROQ_API_KEY environment variable and restart."
+            )
+        logger.info("✓ GROQ_API_KEY is configured and valid")
 
-    # Warm up services — model loading and ChromaDB init happen at
-    # module import time in embedder.py and chroma_client.py.
-    # Log confirms they completed successfully before accepting requests.
-    from services.chroma_client import get_collection_stats
-    stats = get_collection_stats()
-    logger.info(
-        "ChromaDB ready. Collection: %s | Vectors: %d",
-        stats["collection_name"],
-        stats["total_vectors"],
-    )
+        # Warm up services — model loading and ChromaDB init happen at
+        # module import time in embedder.py and chroma_client.py.
+        # Log confirms they completed successfully before accepting requests.
+        logger.info("Initializing ChromaDB...")
+        from services.chroma_client import get_collection_stats
+        stats = get_collection_stats()
+        logger.info(
+            "✓ ChromaDB ready. Collection: %s | Vectors: %d",
+            stats["collection_name"],
+            stats["total_vectors"],
+        )
 
-    yield  # ← server is live and serving requests here
+        logger.info("✓ Application startup complete. Server is ready to accept requests.")
+        yield  # ← server is live and serving requests here
 
-    logger.info("Shutting down %s.", settings.app_name)
+        logger.info("Shutting down %s.", settings.app_name)
+
+    except Exception as exc:
+        logger.exception("FATAL: Startup failed with exception: %s", exc)
+        raise
 
 
 # ── App factory ───────────────────────────────────────────────────────
@@ -79,11 +104,11 @@ def create_app() -> FastAPI:
     # Allow the Next.js dev server during development.
     # Tighten to your production domain before deploying.
     app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
 
     # ── Routers ──────────────────────────────────────────────────────
