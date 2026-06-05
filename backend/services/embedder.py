@@ -28,6 +28,23 @@ _BATCH_SIZE: int = 32
 # ── Model singleton ──────────────────────────────────────────────────
 
 _MODEL_NAME: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5")
+
+# Log the model name for debugging
+logger.info("EMBEDDING_MODEL from environment: %s", repr(_MODEL_NAME))
+logger.info("EMBEDDING_MODEL length: %d chars", len(_MODEL_NAME))
+
+# Validate the model name contains only valid characters
+# Valid format: owner/model-name with alphanumeric, hyphens, underscores, and forward slash
+if not all(c.isalnum() or c in '/-_' for c in _MODEL_NAME):
+    logger.error(
+        "EMBEDDING_MODEL contains invalid characters: %s. "
+        "This suggests a corrupted environment variable. "
+        "Using fallback: BAAI/bge-small-en-v1.5",
+        repr(_MODEL_NAME)
+    )
+    _MODEL_NAME = "BAAI/bge-small-en-v1.5"
+    logger.info("EMBEDDING_MODEL has been reset to fallback: %s", _MODEL_NAME)
+
 _model: Optional[SentenceTransformer] = None
 
 
