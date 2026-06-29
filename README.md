@@ -1,4 +1,4 @@
-# DocTalk AI 📄🤖
+# DocTalk AI 
 
 > **Chat with your documents using AI. Get accurate, source-grounded answers instead of manually searching hundreds of pages.**
 
